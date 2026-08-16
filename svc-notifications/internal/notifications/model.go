@@ -23,7 +23,7 @@ type PushNotification struct {
 	MessageContent string 		`bson:"message_content"`
 	Status NotificationStatus 	`bson:"status"`
 	Amount int64 				`bson:"amount"`
-	Balance int64 				`bson:"balance"`
+	NewBalance int64 				`bson:"balance"`
 	TransactionID string 		`bson:"transaction_id"`
 	WalletID string 			`bson:"wallet_id"`
 	FailedReason string    		`bson:"failed_reason,omitempty"`
@@ -38,7 +38,7 @@ type SMSNotification struct {
 	MessageContent string 		`bson:"message_content"`
 	Status NotificationStatus 	`bson:"status"`
 	Amount int64 				`bson:"amount"`
-	Balance int64 				`bson:"balance"`
+	NewBalance int64 				`bson:"balance"`
 	TransactionID string 		`bson:"transaction_id"`
 	WalletID string 			`bson:"wallet_id"`
 	FailedReason string    		`bson:"failed_reason,omitempty"`

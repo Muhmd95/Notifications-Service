@@ -1,0 +1,62 @@
+# after searching:
+#By splitting the process into two stages, we treat the first stage like a factory and the second stage like a delivery truck.
+#Stage 1 (The Factory): We bring in all the heavy machinery (the Go compiler) and raw materials (your source code).
+#We use the machinery to build the final product (the standalone transactions-service binary).
+#Stage 2 (The Delivery Truck): We start with a brand new, completely empty container (alpine:latest).
+#We go back to the factory, grab only the finished product, put it in the empty truck, and throw the entire factory in the trash.
+#The Result
+#Because Go compiles down to a statically linked binary (meaning everything the app needs to run is baked into that single file),
+#it doesn't need Go installed on the machine to run.
+#By using two stages, your final production container shrinks from ~800MB down to roughly ~15MB.
+#It contains absolutely nothing but a bare-bones Linux kernel and your single executable file.
+#It is incredibly fast, cheap to host, and leaves hackers with zero tools to exploit.
+
+
+#this will be temporary container that will be used to build the binary and then throw away
+# STAGE 1: Build the binary
+FROM golang:1.26.5-alpine AS builder
+# this downloads a linux system called alpines that has goland in it
+
+WORKDIR /app
+#this creates a working dir folder in the container
+
+# Cache dependencies first (makes rebuilding much faster)
+# becasue when changing the code it dont need to install the dep again
+# ./ is the destination
+COPY go.mod go.sum ./
+RUN go mod download
+
+# Copy the rest of the source code
+# first . means everything the econd . means to the /app (cureent folder)
+COPY . .
+
+# Build the application pointing specifically to the cmd folder
+RUN CGO_ENABLED=0 GOOS=linux go build -o notifications-service ./cmd
+
+# RUN: Execute a terminal command.
+# CGO_ENABLED=0: This tells the Go compiler not to rely on any external C libraries (CGO). This guarantees the final binary is 100% standalone and statically linked.
+# GOOS=linux: Forces Go to compile a Linux binary, even if you are building this on a Windows or Mac machine.
+# go build: The standard Go compilation command.
+# -o notifications-service: Names the final output file "notifications-service".
+# ./cmd: Tells the compiler where to find your main.go file.
+
+
+# docker will only run stage 2 in a container cuz the rule of last FROM wins
+# STAGE 2: Create the final production image
+FROM alpine:latest
+
+
+# Install CA certificates for secure HTTPS/TLS connections (like MongoDB Atlas)
+RUN apk --no-cache add ca-certificates
+
+
+WORKDIR /app
+
+# Bring over the compiled binary
+COPY --from=builder /app/notifications-service .
+# copy the executable from the builder stage into the new container
+
+#expose the port that the service will run on (documentaion)
+EXPOSE 50050
+# last command to run in the terminal
+CMD ["./notifications-service"]

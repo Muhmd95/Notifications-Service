@@ -19,11 +19,11 @@ type mongoRepository struct {
 }
 
 // this is the constructor for the mongoRepository struct it takes a mongo database and
+//
 //	returns a repository interface (to make the service layer interact only with the interface functions)
 func NewNotificationRepository(ctx context.Context, db *mongo.Database) (notifications.Repository, error) {
 	pushColl := db.Collection("push_notifications") // this is the collection in the mongo database where the push notifications are stored
-	smsColl := db.Collection("sms_notifications")      // this is the collection in the mongo database where the sms notifications are stored
-
+	smsColl := db.Collection("sms_notifications")   // this is the collection in the mongo database where the sms notifications are stored
 
 	return &mongoRepository{pushCollection: pushColl, smsCollection: smsColl}, nil // return the mongoRepository struct with the collections (this is a repository)
 
@@ -40,24 +40,33 @@ func (r *mongoRepository) SavePushNotification(ctx context.Context, pn *notifica
 	if err != nil {
 		log.Error().Err(err).Msg("Failed to insert push notification (from repo layer)")
 		return err // return any other error
-	}	
+	}
 	pn.ID = result.InsertedID.(primitive.ObjectID) // update the push notification object with the generated ID
 	return nil
 }
 
-func (r *mongoRepository) ModifyPushNotificationStatus(ctx context.Context, notificationID string, status notifications.NotificationStatus, failedReason string)  error {
+func (r *mongoRepository) ModifyPushNotificationStatus(ctx context.Context, notificationID string, status notifications.NotificationStatus, failedReason string) error {
 	log := logger.Ctx(ctx)
 	objID, err := primitive.ObjectIDFromHex(notificationID)
 	if err != nil {
 		log.Error().Err(err).Msg("Failed to convert notificationID to ObjectID (from repo layer)")
 		return err
 	}
-	updatedNotification := r.pushCollection.FindOneAndUpdate(ctx, bson.M{"_id": objID}, bson.M{"$set": bson.M{"status": status, "failed_reason": failedReason, "updated_at": time.Now()}})
-	if updatedNotification.Err() != nil {
-		log.Error().Err(updatedNotification.Err()).Msg("Failed to modify push notification (from repo layer)")
-		return updatedNotification.Err() // return any other error
+	if status == notifications.StatusFailed && failedReason != "" {
+		updatedNotification := r.pushCollection.FindOneAndUpdate(ctx, bson.M{"_id": objID}, bson.M{"$set": bson.M{"status": status, "failed_reason": failedReason, "updated_at": time.Now()}})
+		if updatedNotification.Err() != nil {
+			log.Error().Err(updatedNotification.Err()).Msg("Failed to modify push notification (from repo layer)")
+			return updatedNotification.Err() // return any other error
+		}
+		return nil
+	} else {
+		updatedNotification := r.pushCollection.FindOneAndUpdate(ctx, bson.M{"_id": objID}, bson.M{"$set": bson.M{"status": status, "updated_at": time.Now()}})
+		if updatedNotification.Err() != nil {
+			log.Error().Err(updatedNotification.Err()).Msg("Failed to modify push notification (from repo layer)")
+			return updatedNotification.Err() // return any other error
+		}
+		return nil
 	}
-	return nil
 }
 
 func (r *mongoRepository) SaveSMSNotification(ctx context.Context, sn *notifications.SMSNotification) error {
@@ -71,24 +80,31 @@ func (r *mongoRepository) SaveSMSNotification(ctx context.Context, sn *notificat
 	if err != nil {
 		log.Error().Err(err).Msg("Failed to insert sms notification (from repo layer)")
 		return err // return any other error
-	}	
+	}
 	sn.ID = result.InsertedID.(primitive.ObjectID) // update the sms notification object with the generated ID
 	return nil
 }
 
-
-func (r *mongoRepository) ModifySMSNotificationStatus(ctx context.Context, notificationID string, status notifications.NotificationStatus, failedReason string)  error {
+func (r *mongoRepository) ModifySMSNotificationStatus(ctx context.Context, notificationID string, status notifications.NotificationStatus, failedReason string) error {
 	log := logger.Ctx(ctx)
-	objID, err := primitive.ObjectIDFromHex(notificationID)	
+	objID, err := primitive.ObjectIDFromHex(notificationID)
 	if err != nil {
 		log.Error().Err(err).Msg("Failed to convert notificationID to ObjectID (from repo layer)")
 		return err
 	}
-	updatedNotification := r.smsCollection.FindOneAndUpdate(ctx, bson.M{"_id": objID}, bson.M{"$set": bson.M{"status": status, "failed_reason": failedReason, "updated_at": time.Now()}})
-	if updatedNotification.Err() != nil {
-		log.Error().Err(updatedNotification.Err()).Msg("Failed to modify sms notification (from repo layer)")
-		return updatedNotification.Err() // return any other error
+	if status == notifications.StatusFailed && failedReason != "" {
+		updatedNotification := r.smsCollection.FindOneAndUpdate(ctx, bson.M{"_id": objID}, bson.M{"$set": bson.M{"status": status, "failed_reason": failedReason, "updated_at": time.Now()}})
+		if updatedNotification.Err() != nil {
+			log.Error().Err(updatedNotification.Err()).Msg("Failed to modify sms notification (from repo layer)")
+			return updatedNotification.Err() // return any other error
+		}
+		return nil
+	} else {
+		updatedNotification := r.smsCollection.FindOneAndUpdate(ctx, bson.M{"_id": objID}, bson.M{"$set": bson.M{"status": status, "updated_at": time.Now()}})
+		if updatedNotification.Err() != nil {
+			log.Error().Err(updatedNotification.Err()).Msg("Failed to modify sms notification (from repo layer)")
+			return updatedNotification.Err() // return any other error
+		}
+		return nil
 	}
-	return nil
 }
-

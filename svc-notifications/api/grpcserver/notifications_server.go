@@ -43,7 +43,7 @@ func (s *NotificationServer) SendSMSNotification(ctx context.Context, req *notif
 		return nil, status.Error(codes.Internal, "Failed to send SMS notification")
 	}
 	response.NotificationId = smsResponse.NotificationID
-	response.Success = true
+	response.Success = smsResponse.Success
 	return response, nil
 }
 
@@ -69,7 +69,7 @@ func (s *NotificationServer) SendPushNotification(ctx context.Context, req *noti
 		return nil, status.Error(codes.Internal, "Failed to send push notification")
 	}
 	response.NotificationId = pushResponse.NotificationID
-	response.Success = true
+	response.Success = pushResponse.Success
 
 	return response, nil
 }
