@@ -47,7 +47,12 @@ func (r *mongoRepository) SavePushNotification(ctx context.Context, pn *notifica
 
 func (r *mongoRepository) ModifyPushNotificationStatus(ctx context.Context, notificationID string, status notifications.NotificationStatus, failedReason string)  error {
 	log := logger.Ctx(ctx)
-	updatedNotification := r.pushCollection.FindOneAndUpdate(ctx, bson.M{"_id": notificationID}, bson.M{"$set": bson.M{"status": status, "failed_reason": failedReason, "updated_at": time.Now()}})
+	objID, err := primitive.ObjectIDFromHex(notificationID)
+	if err != nil {
+		log.Error().Err(err).Msg("Failed to convert notificationID to ObjectID (from repo layer)")
+		return err
+	}
+	updatedNotification := r.pushCollection.FindOneAndUpdate(ctx, bson.M{"_id": objID}, bson.M{"$set": bson.M{"status": status, "failed_reason": failedReason, "updated_at": time.Now()}})
 	if updatedNotification.Err() != nil {
 		log.Error().Err(updatedNotification.Err()).Msg("Failed to modify push notification (from repo layer)")
 		return updatedNotification.Err() // return any other error
@@ -74,7 +79,12 @@ func (r *mongoRepository) SaveSMSNotification(ctx context.Context, sn *notificat
 
 func (r *mongoRepository) ModifySMSNotificationStatus(ctx context.Context, notificationID string, status notifications.NotificationStatus, failedReason string)  error {
 	log := logger.Ctx(ctx)
-	updatedNotification := r.smsCollection.FindOneAndUpdate(ctx, bson.M{"_id": notificationID}, bson.M{"$set": bson.M{"status": status, "failed_reason": failedReason, "updated_at": time.Now()}})
+	objID, err := primitive.ObjectIDFromHex(notificationID)	
+	if err != nil {
+		log.Error().Err(err).Msg("Failed to convert notificationID to ObjectID (from repo layer)")
+		return err
+	}
+	updatedNotification := r.smsCollection.FindOneAndUpdate(ctx, bson.M{"_id": objID}, bson.M{"$set": bson.M{"status": status, "failed_reason": failedReason, "updated_at": time.Now()}})
 	if updatedNotification.Err() != nil {
 		log.Error().Err(updatedNotification.Err()).Msg("Failed to modify sms notification (from repo layer)")
 		return updatedNotification.Err() // return any other error

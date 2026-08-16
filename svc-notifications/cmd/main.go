@@ -80,10 +80,10 @@ func main() {
 	notificationRepo, err := mongodb.NewNotificationRepository(context.Background(), database) // passing context because this may introduce delay
 	// the rest are only memory connections
 	if err != nil {
-		logger.Log.Fatal().Err(err).Msg("Failed to create wallet repository")
+		logger.Log.Fatal().Err(err).Msg("Failed to create notification repository")
 	}
 
-	// Initialize the wallet service
+	// Initialize the notification service
 	service := notifications.NewService(notificationRepo)
 
 	// run the grpc server in a separate goroutine
@@ -93,14 +93,13 @@ func main() {
 		// to extract the trace id from the incoming requests
 	)
 	myNotificationServer := grpcserver.NewNotificationServer(service)
+	// Register the gRPC server
+	notificationsv1.RegisterNotificationServiceServer(grpcServer, myNotificationServer)
+	listener, err := net.Listen("tcp", ":"+grpcPort)
+	if err != nil {
+		logger.Log.Fatal().Err(err).Msg("Failed to listen on gRPC port")
+	}
 	go func() {
-		listener, err := net.Listen("tcp", ":"+grpcPort)
-		if err != nil {
-			logger.Log.Fatal().Err(err).Msg("Failed to listen on gRPC port")
-		}
-
-		// Register the gRPC server
-		notificationsv1.RegisterNotificationServiceServer(grpcServer, myNotificationServer)
 		logger.Log.Info().Str("port", grpcPort).Msg("gRPC server is listening")
 		if err := grpcServer.Serve(listener); err != nil {
 			logger.Log.Fatal().Err(err).Msg("gRPC server crashed")
@@ -114,7 +113,6 @@ func main() {
 	// 3. Block until a shutdown signal is caught
 	<-quit
 	logger.Log.Info().Msg("Shutting down svc-notifications gracefully...")
-
 
 	// stop the grpc server gracefully
 	grpcServer.GracefulStop()

@@ -34,7 +34,7 @@ func (s *NotificationServer) SendSMSNotification(ctx context.Context, req *notif
 		Balance:       req.GetBalance(),
 	}
 
-	response := &notificationsv1.SendNotificationResponse{}
+	response :=&notificationsv1.SendNotificationResponse{}
 
 
 	smsResponse, err := s.service.SendSMSNotification(ctx, createSMSNotificationRequest)
@@ -43,7 +43,13 @@ func (s *NotificationServer) SendSMSNotification(ctx context.Context, req *notif
 		return nil, status.Error(codes.Internal, "Failed to send SMS notification")
 	}
 	response.NotificationId = smsResponse.NotificationID
-	response.SmsSuccess = true
+	response.Success = true
+	return response, nil
+}
+
+
+func (s *NotificationServer) SendPushNotification(ctx context.Context, req *notificationsv1.SendNotificationRequest) (*notificationsv1.SendNotificationResponse, error) {
+	log := logger.Ctx(ctx)
 
 
 	createPushNotificationRequest := &notifications.CreatePushNotificationRequest{
@@ -55,14 +61,17 @@ func (s *NotificationServer) SendSMSNotification(ctx context.Context, req *notif
 		Balance:       req.GetBalance(),
 	}
 
+	response := &notificationsv1.SendNotificationResponse{}
+
 	pushResponse, err := s.service.SendPushNotification(ctx, createPushNotificationRequest)
 	if err != nil {
 		log.Error().Err(err).Msg("Failed to send push notification (grpc server)")
 		return nil, status.Error(codes.Internal, "Failed to send push notification")
 	}
 	response.NotificationId = pushResponse.NotificationID
-	response.PushSuccess = true
-	response.SmsSuccess = true
+	response.Success = true
 
 	return response, nil
 }
+
+
