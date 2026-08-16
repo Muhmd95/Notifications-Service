@@ -1,0 +1,84 @@
+package mongodb
+
+import (
+	"context"
+	"time"
+
+	"go.mongodb.org/mongo-driver/bson"
+	"go.mongodb.org/mongo-driver/bson/primitive"
+	"go.mongodb.org/mongo-driver/mongo"
+
+	//project imports
+	"svc-notifications/internal/notifications"
+	"svc-notifications/util/logger"
+)
+
+type mongoRepository struct {
+	pushCollection *mongo.Collection // this is the collection in the mongo database where the push are stored
+	smsCollection  *mongo.Collection // this is the collection in the mongo database where the sms are stored
+}
+
+// this is the constructor for the mongoRepository struct it takes a mongo database and
+//	returns a repository interface (to make the service layer interact only with the interface functions)
+func NewNotificationRepository(ctx context.Context, db *mongo.Database) (notifications.Repository, error) {
+	pushColl := db.Collection("push_notifications") // this is the collection in the mongo database where the push notifications are stored
+	smsColl := db.Collection("sms_notifications")      // this is the collection in the mongo database where the sms notifications are stored
+
+
+	return &mongoRepository{pushCollection: pushColl, smsCollection: smsColl}, nil // return the mongoRepository struct with the collections (this is a repository)
+
+}
+
+func (r *mongoRepository) SavePushNotification(ctx context.Context, pn *notifications.PushNotification) error {
+	log := logger.Ctx(ctx)
+	result, err := r.pushCollection.InsertOne(ctx, pn) // this is the method that
+	// will insert the push notification into the collection in the mongo database
+	// context is passed to know the timeout of therequest
+	// if the request takes too long it will be cancelled
+	//the time out of the request is embedded in the ctx
+	// beside ctx contains meta data
+	if err != nil {
+		log.Error().Err(err).Msg("Failed to insert push notification (from repo layer)")
+		return err // return any other error
+	}	
+	pn.ID = result.InsertedID.(primitive.ObjectID) // update the push notification object with the generated ID
+	return nil
+}
+
+func (r *mongoRepository) ModifyPushNotificationStatus(ctx context.Context, notificationID string, status notifications.NotificationStatus, failedReason string)  error {
+	log := logger.Ctx(ctx)
+	updatedNotification := r.pushCollection.FindOneAndUpdate(ctx, bson.M{"_id": notificationID}, bson.M{"$set": bson.M{"status": status, "failed_reason": failedReason, "updated_at": time.Now()}})
+	if updatedNotification.Err() != nil {
+		log.Error().Err(updatedNotification.Err()).Msg("Failed to modify push notification (from repo layer)")
+		return updatedNotification.Err() // return any other error
+	}
+	return nil
+}
+
+func (r *mongoRepository) SaveSMSNotification(ctx context.Context, sn *notifications.SMSNotification) error {
+	log := logger.Ctx(ctx)
+	result, err := r.smsCollection.InsertOne(ctx, sn) // this is the method that
+	// will insert the sms notification into the collection in the mongo database
+	// context is passed to know the timeout of therequest
+	// if the request takes too long it will be cancelled
+	//the time out of the request is embedded in the ctx
+	// beside ctx contains meta data
+	if err != nil {
+		log.Error().Err(err).Msg("Failed to insert sms notification (from repo layer)")
+		return err // return any other error
+	}	
+	sn.ID = result.InsertedID.(primitive.ObjectID) // update the sms notification object with the generated ID
+	return nil
+}
+
+
+func (r *mongoRepository) ModifySMSNotificationStatus(ctx context.Context, notificationID string, status notifications.NotificationStatus, failedReason string)  error {
+	log := logger.Ctx(ctx)
+	updatedNotification := r.smsCollection.FindOneAndUpdate(ctx, bson.M{"_id": notificationID}, bson.M{"$set": bson.M{"status": status, "failed_reason": failedReason, "updated_at": time.Now()}})
+	if updatedNotification.Err() != nil {
+		log.Error().Err(updatedNotification.Err()).Msg("Failed to modify sms notification (from repo layer)")
+		return updatedNotification.Err() // return any other error
+	}
+	return nil
+}
+
