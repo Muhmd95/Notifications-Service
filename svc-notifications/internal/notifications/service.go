@@ -3,7 +3,6 @@ package notifications
 import (
 	"context"
 	"math/rand"
-	"time"
 	"svc-notifications/util/logger"
 )
 
@@ -12,6 +11,7 @@ type Service struct {
 }
 
 func NewService(repo Repository) *Service {
+
 	return &Service{repo: repo}
 }
 
@@ -22,12 +22,12 @@ func (s *Service) SendPushNotification(ctx context.Context, pn *CreatePushNotifi
 		Title:          "Push Notification",
 		MessageContent: pn.Message,
 		Amount:         pn.Amount,
-		NewBalance:        pn.Balance,
+		NewBalance:     pn.Balance,
 		TransactionID:  pn.TransactionID,
 		WalletID:       pn.WalletID,
 		Status:         StatusPending,
-		CreatedAt:     time.Now(),
-		UpdatedAt:     time.Now(),
+		CreatedAt:      pn.CreatedAt,
+		UpdatedAt:      pn.CreatedAt,
 	}
 	err := s.repo.SavePushNotification(ctx, notification)
 	if err != nil {
@@ -43,6 +43,7 @@ func (s *Service) SendPushNotification(ctx context.Context, pn *CreatePushNotifi
 	}
 	prop := rand.Float64()
 	if prop < 0.8 {
+		log.Info().Msg("push notification sent successfully to the user")
 		err = s.repo.ModifyPushNotificationStatus(ctx, notification.ID.Hex(), StatusSuccessful, "")
 		if err != nil {
 			log.Error().Err(err).Msg("couldn't mark the push notification as successful (service layer)")
@@ -50,10 +51,11 @@ func (s *Service) SendPushNotification(ctx context.Context, pn *CreatePushNotifi
 			return nil, err
 		}
 		return &CreatePushNotificationResponse{
-			Success: true,
+			Success:        true,
 			NotificationID: notification.ID.Hex(),
 		}, nil
 	} else {
+		log.Info().Msg("push notification failed to send to the user")
 		err = s.repo.ModifyPushNotificationStatus(ctx, notification.ID.Hex(), StatusFailed, "you're weak")
 		if err != nil {
 			log.Error().Err(err).Msg("couldn't mark the push notification as Failed (service layer)")
@@ -61,26 +63,25 @@ func (s *Service) SendPushNotification(ctx context.Context, pn *CreatePushNotifi
 			return nil, err
 		}
 		return &CreatePushNotificationResponse{
-			Success: false,
+			Success:        false,
 			NotificationID: notification.ID.Hex(),
 		}, nil
 	}
 
 }
 
-
 func (s *Service) SendSMSNotification(ctx context.Context, pn *CreateSMSNotificationRequest) (*CreateSMSNotificationResponse, error) {
 	log := logger.Ctx(ctx)
 	notification := &SMSNotification{
-		PhoneNumber: pn.PhoneNumber,
+		PhoneNumber:    pn.PhoneNumber,
 		MessageContent: pn.Message,
 		Amount:         pn.Amount,
-		NewBalance:        pn.Balance,
+		NewBalance:     pn.Balance,
 		TransactionID:  pn.TransactionID,
 		WalletID:       pn.WalletID,
 		Status:         StatusPending,
-		CreatedAt:     time.Now(),
-		UpdatedAt:     time.Now(),
+		CreatedAt:      pn.CreatedAt,
+		UpdatedAt:      pn.CreatedAt,
 	}
 	err := s.repo.SaveSMSNotification(ctx, notification)
 	if err != nil {
@@ -96,23 +97,25 @@ func (s *Service) SendSMSNotification(ctx context.Context, pn *CreateSMSNotifica
 	}
 	prop := rand.Float64()
 	if prop < 0.8 {
+		log.Info().Msg("sms notification sent successfully to the user")
 		err = s.repo.ModifySMSNotificationStatus(ctx, notification.ID.Hex(), StatusSuccessful, "")
 		if err != nil {
 			log.Error().Err(err).Msg("couldn't mark the sms notification as successful (service layer)")
 			return nil, err
 		}
 		return &CreateSMSNotificationResponse{
-			Success: true,
+			Success:        true,
 			NotificationID: notification.ID.Hex(),
 		}, nil
 	} else {
+		log.Info().Msg("sms notification failed to send to the user")
 		err = s.repo.ModifySMSNotificationStatus(ctx, notification.ID.Hex(), StatusFailed, "you're weak")
 		if err != nil {
 			log.Error().Err(err).Msg("couldn't mark the sms notification as Failed (service layer)")
 			return nil, err
 		}
 		return &CreateSMSNotificationResponse{
-			Success: false,
+			Success:        false,
 			NotificationID: notification.ID.Hex(),
 		}, nil
 	}

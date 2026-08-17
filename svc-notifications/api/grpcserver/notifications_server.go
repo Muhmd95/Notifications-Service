@@ -2,7 +2,6 @@ package grpcserver
 
 import (
 	"context"
-	
 
 	notificationsv1 "github.com/Muhmd95/Contracts/notifications/v1"
 	"google.golang.org/grpc/codes"
@@ -32,25 +31,23 @@ func (s *NotificationServer) SendSMSNotification(ctx context.Context, req *notif
 		WalletID:      req.GetWalletId(),
 		Amount:        req.GetAmount(),
 		Balance:       req.GetBalance(),
+		CreatedAt:     req.GetCreatedAt().AsTime(),
 	}
-
-	response :=&notificationsv1.SendNotificationResponse{}
-
 
 	smsResponse, err := s.service.SendSMSNotification(ctx, createSMSNotificationRequest)
 	if err != nil {
 		log.Error().Err(err).Msg("Failed to send SMS notification (grpc server)")
 		return nil, status.Error(codes.Internal, "Failed to send SMS notification")
 	}
-	response.NotificationId = smsResponse.NotificationID
-	response.Success = smsResponse.Success
-	return response, nil
-}
 
+	return &notificationsv1.SendNotificationResponse{
+		NotificationId: smsResponse.NotificationID,
+		Success:        smsResponse.Success,
+	}, nil
+}
 
 func (s *NotificationServer) SendPushNotification(ctx context.Context, req *notificationsv1.SendNotificationRequest) (*notificationsv1.SendNotificationResponse, error) {
 	log := logger.Ctx(ctx)
-
 
 	createPushNotificationRequest := &notifications.CreatePushNotificationRequest{
 		DeviceToken:   req.GetPhoneNumber(),
@@ -59,19 +56,17 @@ func (s *NotificationServer) SendPushNotification(ctx context.Context, req *noti
 		WalletID:      req.GetWalletId(),
 		Amount:        req.GetAmount(),
 		Balance:       req.GetBalance(),
+		CreatedAt:     req.GetCreatedAt().AsTime(),
 	}
-
-	response := &notificationsv1.SendNotificationResponse{}
 
 	pushResponse, err := s.service.SendPushNotification(ctx, createPushNotificationRequest)
 	if err != nil {
 		log.Error().Err(err).Msg("Failed to send push notification (grpc server)")
 		return nil, status.Error(codes.Internal, "Failed to send push notification")
 	}
-	response.NotificationId = pushResponse.NotificationID
-	response.Success = pushResponse.Success
 
-	return response, nil
+	return &notificationsv1.SendNotificationResponse{
+		NotificationId: pushResponse.NotificationID,
+		Success:        pushResponse.Success,
+	}, nil
 }
-
-

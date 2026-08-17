@@ -3,7 +3,7 @@ module svc-notifications
 go 1.26.5
 
 require (
-	github.com/Muhmd95/Contracts v0.0.0-20260816164442-7d2f72c3f554
+	github.com/Muhmd95/Contracts v0.0.0-20260817104701-829e9b95c500
 	github.com/joho/godotenv v1.5.1
 	github.com/rs/zerolog v1.35.1
 	go.mongodb.org/mongo-driver v1.17.9
