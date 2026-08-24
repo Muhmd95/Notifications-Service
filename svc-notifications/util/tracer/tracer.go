@@ -2,8 +2,8 @@ package tracer
 
 import (
 	"go.opentelemetry.io/otel"
-	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	"go.opentelemetry.io/otel/propagation"
+	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 )
 
 // intialize the tracer locally only without connecting to kibana
@@ -16,8 +16,7 @@ func InitTracer(serviceName string) (*sdktrace.TracerProvider, error) {
 	// this registers the global tracee so that when the otelhttp
 	// want to create a span it will use this tracer provider
 
-
-	// 2. CRITICAL: Set the global propagator so otelhttp knows how to 
+	// 2. CRITICAL: Set the global propagator so otelhttp knows how to
 	// extract and inject Trace IDs into HTTP headers across your services.
 	otel.SetTextMapPropagator(propagation.TraceContext{})
 	return tp, nil
