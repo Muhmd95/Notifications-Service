@@ -4,15 +4,12 @@ go 1.26.5
 
 require (
 	github.com/IBM/sarama v1.60.2
-	github.com/Muhmd95/Contracts v0.0.0-20260817104701-829e9b95c500
 	github.com/joho/godotenv v1.5.1
 	github.com/rs/zerolog v1.35.1
 	go.mongodb.org/mongo-driver v1.17.9
-	go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc v0.70.0
 	go.opentelemetry.io/otel v1.45.0
 	go.opentelemetry.io/otel/sdk v1.45.0
 	go.opentelemetry.io/otel/trace v1.45.0
-	google.golang.org/grpc v1.83.0
 )
 
 require (
@@ -46,6 +43,4 @@ require (
 	golang.org/x/sync v0.22.0 // indirect
 	golang.org/x/sys v0.47.0 // indirect
 	golang.org/x/text v0.41.0 // indirect
-	google.golang.org/genproto/googleapis/rpc v0.0.0-20260803160001-6ac0973c030d // indirect
-	google.golang.org/protobuf v1.36.12 // indirect
 )
