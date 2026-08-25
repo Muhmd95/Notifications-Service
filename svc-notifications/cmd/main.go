@@ -2,21 +2,22 @@ package main
 
 import (
 	"context"
-	notificationsv1 "github.com/Muhmd95/Contracts/notifications/v1"
+	// notificationsv1 "github.com/Muhmd95/Contracts/notifications/v1"
 	"github.com/joho/godotenv"
-	"go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc"
-	"google.golang.org/grpc"
-	"net"
+	// "go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc"
+	// "google.golang.org/grpc"
+	// "net"
 	"os"
 	"os/signal"
 	"syscall"
 
 	// project paths
-	"svc-notifications/api/grpcserver"
+	// "svc-notifications/api/grpcserver"
 	"svc-notifications/external/mongodb"
 	"svc-notifications/internal/notifications"
 	"svc-notifications/util/logger"
 	"svc-notifications/util/tracer"
+	"svc-notifications/external/kafka/consumer"
 )
 
 func main() {
@@ -59,6 +60,24 @@ func main() {
 	if dbName == "" {
 		dbName = "notifications_db" // default database name
 	}
+	// get kafka brokers
+	brokers := os.Getenv("KAFKA_BROKERS")
+	if brokers == "" {
+		logger.Log.Fatal().Msg("KAFKA_BROKERS environment variable is required but not set")
+	}
+	kafkaBrokers := []string{brokers} // convert to slice of strings
+	
+	// get kafka group id
+	kafkaGroupID := os.Getenv("KAFKA_GROUP_ID")
+	if kafkaGroupID == "" {
+		logger.Log.Fatal().Msg("KAFKA_GROUP_ID environment variable is required but not set")
+	}
+	
+	// get kafka topic
+	kafkaTopic := os.Getenv("KAFKA_TOPIC")
+	if kafkaTopic == "" {
+		logger.Log.Fatal().Msg("KAFKA_TOPIC environment variable is required but not set")
+	}
 
 	mongoClient, err := mongodb.ConnectMongoDB(mongoURI)
 	if err != nil {
@@ -86,25 +105,35 @@ func main() {
 	// Initialize the notification service
 	service := notifications.NewService(notificationRepo)
 
-	// run the grpc server in a separate goroutine
-	// Initialize the gRPC server
-	grpcServer := grpc.NewServer(
-		grpc.StatsHandler(otelgrpc.NewServerHandler()), // adding the grpc interceptor
-		// to extract the trace id from the incoming requests
-	)
-	myNotificationServer := grpcserver.NewNotificationServer(service)
-	// Register the gRPC server
-	notificationsv1.RegisterNotificationServiceServer(grpcServer, myNotificationServer)
-	listener, err := net.Listen("tcp", ":"+grpcPort)
+	//init kafka
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel() // ensure the context is canceled when main exits
+	kafkaConsumer, err := consumer.NewConsumer(context.Background(), kafkaBrokers, kafkaGroupID, kafkaTopic, service)
 	if err != nil {
-		logger.Log.Fatal().Err(err).Msg("Failed to listen on gRPC port")
+		logger.Log.Fatal().Err(err).Msg("Failed to create Kafka consumer")
 	}
-	go func() {
-		logger.Log.Info().Str("port", grpcPort).Msg("gRPC server is listening")
-		if err := grpcServer.Serve(listener); err != nil {
-			logger.Log.Fatal().Err(err).Msg("gRPC server crashed")
-		}
-	}()
+	go kafkaConsumer.Run(ctx) // run the consumer in a separate goroutine
+	defer kafkaConsumer.Close() // close the consumer when the app exits
+
+	// run the grpc server in a separate goroutine
+	// // Initialize the gRPC server
+	// grpcServer := grpc.NewServer(
+	// 	grpc.StatsHandler(otelgrpc.NewServerHandler()), // adding the grpc interceptor
+	// 	// to extract the trace id from the incoming requests
+	// )
+	// myNotificationServer := grpcserver.NewNotificationServer(service)
+	// // Register the gRPC server
+	// notificationsv1.RegisterNotificationServiceServer(grpcServer, myNotificationServer)
+	// listener, err := net.Listen("tcp", ":"+grpcPort)
+	// if err != nil {
+	// 	logger.Log.Fatal().Err(err).Msg("Failed to listen on gRPC port")
+	// }
+	// go func() {
+	// 	logger.Log.Info().Str("port", grpcPort).Msg("gRPC server is listening")
+	// 	if err := grpcServer.Serve(listener); err != nil {
+	// 		logger.Log.Fatal().Err(err).Msg("gRPC server crashed")
+	// 	}
+	// }()
 
 	// 2. Set up the signal listener
 	quit := make(chan os.Signal, 1)
@@ -114,8 +143,8 @@ func main() {
 	<-quit
 	logger.Log.Info().Msg("Shutting down svc-notifications gracefully...")
 
-	// stop the grpc server gracefully
-	grpcServer.GracefulStop()
+	// // stop the grpc server gracefully
+	// grpcServer.GracefulStop()
 
 	logger.Log.Info().Msg("svc-notifications exited safely")
 }
