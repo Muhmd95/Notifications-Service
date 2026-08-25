@@ -6,6 +6,12 @@ import (
 	"svc-notifications/util/logger"
 )
 
+// the consumer's ONLY view of the service 
+// this is the contrsct between the service and the consumer
+type TransactionEventProcessor interface {
+    ProcessTransactionEvent(ctx context.Context, evt TransactionEvent) error
+}
+
 type Service struct {
 	repo Repository // this is the repository interface that will be used to interact with the database
 }
