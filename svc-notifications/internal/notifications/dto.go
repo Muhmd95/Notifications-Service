@@ -6,20 +6,24 @@ type CreatePushNotificationRequest struct {
 	DeviceToken   string // the phonenumber for now (put in the grpc server)
 	Title         string // put in the service layer
 	Message       string
+	EventType     string
 	Amount        int64
 	Balance       int64
 	TransactionID string
 	WalletID      string
+	NationalID     string
 	CreatedAt     time.Time
 }
 
 type CreateSMSNotificationRequest struct {
 	PhoneNumber   string
 	Message       string
+	EventType     string
 	Amount        int64
 	Balance       int64
 	TransactionID string
 	WalletID      string
+	NationalID     string
 	CreatedAt     time.Time
 }
 
@@ -33,6 +37,12 @@ type CreateSMSNotificationResponse struct {
 	NotificationID string
 }
 
+
+// kafka dtos
+const (
+	EventWalletCredited = "WALLET_CREDITED"
+	EventWalletDebited  = "WALLET_DEBITED"
+)
 type TransactionEvent struct {
 	EventType          string // "WALLET_CREDITED" | "WALLET_DEBITED"
 	TxnID              string

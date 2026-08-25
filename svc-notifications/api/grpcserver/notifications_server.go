@@ -1,72 +1,72 @@
 package grpcserver
 
-import (
-	"context"
+// import (
+// 	"context"
 
-	notificationsv1 "github.com/Muhmd95/Contracts/notifications/v1"
-	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/status"
+// 	notificationsv1 "github.com/Muhmd95/Contracts/notifications/v1"
+// 	"google.golang.org/grpc/codes"
+// 	"google.golang.org/grpc/status"
 
-	"svc-notifications/internal/notifications"
-	"svc-notifications/util/logger"
-)
+// 	"svc-notifications/internal/notifications"
+// 	"svc-notifications/util/logger"
+// )
 
-type NotificationServer struct {
-	notificationsv1.UnimplementedNotificationServiceServer
+// type NotificationServer struct {
+// 	notificationsv1.UnimplementedNotificationServiceServer
 
-	service *notifications.Service
-}
+// 	service *notifications.Service
+// }
 
-func NewNotificationServer(service *notifications.Service) *NotificationServer {
-	return &NotificationServer{service: service}
-}
+// func NewNotificationServer(service *notifications.Service) *NotificationServer {
+// 	return &NotificationServer{service: service}
+// }
 
-func (s *NotificationServer) SendSMSNotification(ctx context.Context, req *notificationsv1.SendNotificationRequest) (*notificationsv1.SendNotificationResponse, error) {
-	log := logger.Ctx(ctx)
+// func (s *NotificationServer) SendSMSNotification(ctx context.Context, req *notificationsv1.SendNotificationRequest) (*notificationsv1.SendNotificationResponse, error) {
+// 	log := logger.Ctx(ctx)
 
-	createSMSNotificationRequest := &notifications.CreateSMSNotificationRequest{
-		PhoneNumber:   req.GetPhoneNumber(),
-		Message:       req.GetMessage(),
-		TransactionID: req.GetTransactionId(),
-		WalletID:      req.GetWalletId(),
-		Amount:        req.GetAmount(),
-		Balance:       req.GetBalance(),
-		CreatedAt:     req.GetCreatedAt().AsTime(),
-	}
+// 	createSMSNotificationRequest := &notifications.CreateSMSNotificationRequest{
+// 		PhoneNumber:   req.GetPhoneNumber(),
+// 		Message:       req.GetMessage(),
+// 		TransactionID: req.GetTransactionId(),
+// 		WalletID:      req.GetWalletId(),
+// 		Amount:        req.GetAmount(),
+// 		Balance:       req.GetBalance(),
+// 		CreatedAt:     req.GetCreatedAt().AsTime(),
+// 	}
 
-	smsResponse, err := s.service.SendSMSNotification(ctx, createSMSNotificationRequest)
-	if err != nil {
-		log.Error().Err(err).Msg("Failed to send SMS notification (grpc server)")
-		return nil, status.Error(codes.Internal, "Failed to send SMS notification")
-	}
+// 	smsResponse, err := s.service.SendSMSNotification(ctx, createSMSNotificationRequest)
+// 	if err != nil {
+// 		log.Error().Err(err).Msg("Failed to send SMS notification (grpc server)")
+// 		return nil, status.Error(codes.Internal, "Failed to send SMS notification")
+// 	}
 
-	return &notificationsv1.SendNotificationResponse{
-		NotificationId: smsResponse.NotificationID,
-		Success:        smsResponse.Success,
-	}, nil
-}
+// 	return &notificationsv1.SendNotificationResponse{
+// 		NotificationId: smsResponse.NotificationID,
+// 		Success:        smsResponse.Success,
+// 	}, nil
+// }
 
-func (s *NotificationServer) SendPushNotification(ctx context.Context, req *notificationsv1.SendNotificationRequest) (*notificationsv1.SendNotificationResponse, error) {
-	log := logger.Ctx(ctx)
+// func (s *NotificationServer) SendPushNotification(ctx context.Context, req *notificationsv1.SendNotificationRequest) (*notificationsv1.SendNotificationResponse, error) {
+// 	log := logger.Ctx(ctx)
 
-	createPushNotificationRequest := &notifications.CreatePushNotificationRequest{
-		DeviceToken:   req.GetPhoneNumber(),
-		Message:       req.GetMessage(),
-		TransactionID: req.GetTransactionId(),
-		WalletID:      req.GetWalletId(),
-		Amount:        req.GetAmount(),
-		Balance:       req.GetBalance(),
-		CreatedAt:     req.GetCreatedAt().AsTime(),
-	}
+// 	createPushNotificationRequest := &notifications.CreatePushNotificationRequest{
+// 		DeviceToken:   req.GetPhoneNumber(),
+// 		Message:       req.GetMessage(),
+// 		TransactionID: req.GetTransactionId(),
+// 		WalletID:      req.GetWalletId(),
+// 		Amount:        req.GetAmount(),
+// 		Balance:       req.GetBalance(),
+// 		CreatedAt:     req.GetCreatedAt().AsTime(),
+// 	}
 
-	pushResponse, err := s.service.SendPushNotification(ctx, createPushNotificationRequest)
-	if err != nil {
-		log.Error().Err(err).Msg("Failed to send push notification (grpc server)")
-		return nil, status.Error(codes.Internal, "Failed to send push notification")
-	}
+// 	pushResponse, err := s.service.SendPushNotification(ctx, createPushNotificationRequest)
+// 	if err != nil {
+// 		log.Error().Err(err).Msg("Failed to send push notification (grpc server)")
+// 		return nil, status.Error(codes.Internal, "Failed to send push notification")
+// 	}
 
-	return &notificationsv1.SendNotificationResponse{
-		NotificationId: pushResponse.NotificationID,
-		Success:        pushResponse.Success,
-	}, nil
-}
+// 	return &notificationsv1.SendNotificationResponse{
+// 		NotificationId: pushResponse.NotificationID,
+// 		Success:        pushResponse.Success,
+// 	}, nil
+// }
