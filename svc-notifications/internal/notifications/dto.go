@@ -44,14 +44,14 @@ const (
 	EventWalletDebited  = "WALLET_DEBITED"
 )
 type TransactionEvent struct {
-	EventType          string // "WALLET_CREDITED" | "WALLET_DEBITED"
-	TxnID              string
-	WalletID           string // partition key
-	PhoneNumber        string
-	NationalID         string // for the future will wire the user and their wallets
-	Amount             int64  // amount of the txn
-	BalanceAfter       int64
-	OccurredAt         time.Time // business time when the money moved
-	CoupledPhoneNumber string    // when the transaction is transfer will be put with the sender						// must be checked first in the notifications service
+	EventType          string		`json:"event_type"`		 // "WALLET_CREDITED" | "WALLET_DEBITED"
+	TxnID              string		`json:"txn_id"`			 // transaction id
+	WalletID           string 		`json:"wallet_id"`			 // partition key
+	PhoneNumber        string		`json:"phone_number"`
+	NationalID         string 		`json:"national_id"`		// for the future will wire the user and their wallets
+	Amount             int64  		`json:"amount"`				// amount of the txn
+	BalanceAfter       int64  		`json:"balance_after"`
+	OccurredAt         time.Time 	`json:"occurred_at"`		// business time when the money moved
+	CoupledPhoneNumber string    	`json:"coupled_phone_number"` // when the transaction is transfer will be put with the sender						// must be checked first in the notifications service
 }
 
