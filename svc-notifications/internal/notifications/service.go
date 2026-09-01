@@ -155,7 +155,7 @@ func buildPush(evt TransactionEvent, message string) *CreatePushNotificationRequ
 		EventType:     evt.EventType,
 		Amount:        evt.Amount,
 		Balance:       evt.BalanceAfter,
-		TransactionID: evt.TxnID,
+		TransactionID: evt.ID,
 		WalletID:      evt.WalletID,
 		NationalID:    evt.NationalID,
 		CreatedAt:     time.Now(),
@@ -169,7 +169,7 @@ func buildSMS(evt TransactionEvent, message string) *CreateSMSNotificationReques
 		EventType:     evt.EventType,
 		Amount:        evt.Amount,
 		Balance:       evt.BalanceAfter,
-		TransactionID: evt.TxnID,
+		TransactionID: evt.ID,
 		WalletID:      evt.WalletID,
 		NationalID:    evt.NationalID,
 		CreatedAt:     time.Now(),
@@ -179,14 +179,12 @@ func buildSMS(evt TransactionEvent, message string) *CreateSMSNotificationReques
 
 func renderNotificationText(evt TransactionEvent) (string, error) {
 	var transactionType string
-	if evt.CoupledPhoneNumber == "" {
-		if evt.EventType == EventWalletDebited {
-			transactionType = "WITHDRAWAL"
-		} else {
-			transactionType = "DEPOSIT"
-		}
-	} else {
-		if evt.EventType == EventWalletDebited {
+	if evt.EventType == "WITHDRAWAL" {
+		transactionType = "WITHDRAWAL"
+	} else if evt.EventType == "DEPOSIT" {
+		transactionType = "DEPOSIT"
+	} else {	
+		if evt.PhoneNumber == evt.SenderPhoneNumber {
 			transactionType = "TRANSFER_SENDER"
 		} else {
 			transactionType = "TRANSFER_RECEIVER"
@@ -197,19 +195,19 @@ func renderNotificationText(evt TransactionEvent) (string, error) {
 	switch transactionType {
 	case "DEPOSIT":
 		{
-			return fmt.Sprintf("Deposit of %d to your wallet of phone number: %s completed at %s. New balance: %d.", evt.Amount, evt.PhoneNumber, evt.OccurredAt.Format("02 Jan 2006, 15:04"), evt.BalanceAfter), nil
+			return fmt.Sprintf("Deposit of %d to your wallet of phone number: %s completed at %s. New balance: %d.", evt.Amount, evt.PhoneNumber, time.UnixMilli(evt.OccurredAt).Format("02 Jan 2006, 15:04"), evt.BalanceAfter), nil
 		}
 	case "WITHDRAWAL":
 		{
-			return fmt.Sprintf("Withdrawal of %d from your wallet of phone number: %s completed at %s. New balance: %d.", evt.Amount, evt.PhoneNumber, evt.OccurredAt.Format("02 Jan 2006, 15:04"), evt.BalanceAfter), nil
+			return fmt.Sprintf("Withdrawal of %d from your wallet of phone number: %s completed at %s. New balance: %d.", evt.Amount, evt.PhoneNumber, time.UnixMilli(evt.OccurredAt).Format("02 Jan 2006, 15:04"), evt.BalanceAfter), nil
 		}
 	case "TRANSFER_SENDER":
 		{
-			return fmt.Sprintf("Transfer of %d from your wallet of phone number: %s to phone number: %s completed at %s. New balance: %d.", evt.Amount, evt.PhoneNumber, evt.CoupledPhoneNumber, evt.OccurredAt.Format("02 Jan 2006, 15:04"), evt.BalanceAfter), nil
+			return fmt.Sprintf("Transfer of %d from your wallet of phone number: %s to phone number: %s completed at %s. New balance: %d.", evt.Amount, evt.PhoneNumber, evt.ReceiverPhoneNumber, time.UnixMilli(evt.OccurredAt).Format("02 Jan 2006, 15:04"), evt.BalanceAfter), nil
 		}
 	case "TRANSFER_RECEIVER":
 		{
-			return fmt.Sprintf("Transfer of %d to your wallet of phone number: %s from phone number: %s completed at %s. New balance: %d.", evt.Amount, evt.PhoneNumber, evt.CoupledPhoneNumber, evt.OccurredAt.Format("02 Jan 2006, 15:04"), evt.BalanceAfter), nil
+			return fmt.Sprintf("Transfer of %d to your wallet of phone number: %s from phone number: %s completed at %s. New balance: %d.", evt.Amount, evt.PhoneNumber, evt.SenderPhoneNumber, time.UnixMilli(evt.OccurredAt).Format("02 Jan 2006, 15:04"), evt.BalanceAfter), nil
 		}
 	default:
 		return "", errors.New("unknown transaction type")

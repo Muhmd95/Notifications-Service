@@ -76,6 +76,22 @@ func (h *handler) ConsumeClaim(s sarama.ConsumerGroupSession, claim sarama.Consu
 			continue
 		}
 
+		// normalize _id: the connector delivers it as a STRING containing {"$oid": "..."}
+		var oid struct {
+			OID string `json:"$oid"`
+		}
+		if err := json.Unmarshal([]byte(evt.ID), &oid); err == nil && oid.OID != "" {
+			evt.ID = oid.OID
+		}
+
+		// tripwire: an empty txn id would poison the dedup index (every event
+		// colliding on transaction_id="") — skip loudly instead of silently
+		if evt.ID == "" {
+			log.Error().Msgf("Transaction event with empty _id, skipping: topic=%s partition=%d offset=%d payload=%s", msg.Topic, msg.Partition, msg.Offset, string(msg.Value))
+			s.MarkMessage(msg, "")
+			continue
+		}
+
 		var err error
 		for i := 0; i < maxRetries; i++ {
 			err = h.processor.ProcessTransactionEvent(s.Context(), evt) // the process is idempotent, so we can retry safely

@@ -45,37 +45,29 @@ const (
 )
 
 
+// OBSERVED wire shape on transactions_db.transactions (verified via console-consumer):
 // {
-//   "_id": {"$oid": "67cf1a2b3c4d5e6f7a8b9c0d"},
-//   "reference_id": "dep-123",
-//   "phone_number": "01112223334",
+//   "_id": "{\"$oid\": \"6a96ed4026e9db4bb4a3703b\"}",   <- STRING containing extended JSON
+//   "phone_number": "01511111111",
 //   "sender_phone": "",
 //   "receiver_phone": "",
 //   "type": "DEPOSIT",
-//   "status": "POSTED",
-//   "amount": 500,
-//   "wallet_id": "67ae5f...",
-//   "balance_before": 0,
-//   "balance_after": 500,
-//   "sequence_number": 1,
-//   "created_at": {"$date": 1756300800000}
+//   "amount": 50,
+//   "wallet_id": "6a96e647c3449c68b46c7a32",
+//   "balance_after": 300,
+//   "created_at": 1788276032891                          <- plain epoch-milliseconds
 // }
+// ($project strips: reference_id, balance_before, status, sequence_number)
 type TransactionEvent struct {
-	Type          string  			`json:"type"`		// "WALLET_CREDITED" | "WALLET_DEBITED" will need logic to be put
-	ID                 struct {
-		TxnID string `json:"$oid"`
-	}		`json:"_id"`			 // transaction id
-	SenderPhoneNumber   string		`json:"sender_phone"`	// when the transaction is transfer will be put with the sender	will need logic to be put
-	ReceiverPhoneNumber string		`json:"receiver_phone"`	// when the transaction is transfer will be put with the receiver	will need logic to be put
-	WalletID           string 		`json:"wallet_id"`			 // partition key
-	PhoneNumber        string		`json:"phone_number"`
-	NationalID         string 		`json:"national_id"`		// for the future will wire the user and their wallets
-	Amount             int64  		`json:"amount"`				// amount of the txn
-	BalanceAfter       int64  		`json:"balance_after"`
-	OccurredAt         struct {
-		Date int64 `json:"$date"` // may be string watch for testing
-	} 	`json:"created_at"`		// business time when the money moved
-	CoupledPhoneNumber string    	 // when the transaction is transfer will be put with the sender	will need logic to be put					
-	// must be checked first in the notifications service
+	EventType           string  `json:"type"`  // raw vocab: DEPOSIT | WITHDRAWAL | TRANSFER (legs derived in render)
+	ID                  string  `json:"_id"`   // string containing {"$oid": "..."} — normalized in the consumer
+	SenderPhoneNumber   string  `json:"sender_phone"`
+	ReceiverPhoneNumber string  `json:"receiver_phone"`
+	WalletID            string  `json:"wallet_id"` // partition key
+	PhoneNumber         string  `json:"phone_number"`
+	NationalID          string  `json:"national_id"` // for the future will wire the user and their wallets
+	Amount              int64   `json:"amount"`
+	BalanceAfter        int64   `json:"balance_after"`
+	OccurredAt          int64   `json:"created_at"` // business time when the money moved (epoch millis)
 }
 
