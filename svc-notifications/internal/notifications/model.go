@@ -2,6 +2,7 @@ package notifications
 
 import (
 	"time"
+	"errors"
 
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
@@ -20,11 +21,13 @@ type PushNotification struct {
 	DeviceToken    string             `bson:"device_token"`
 	Title          string             `bson:"title"`
 	MessageContent string             `bson:"message_content"`
+	EventType	   string			  `bson:"event_type"`
 	Status         NotificationStatus `bson:"status"`
 	Amount         int64              `bson:"amount"`
 	NewBalance     int64              `bson:"balance"`
 	TransactionID  string             `bson:"transaction_id"`
 	WalletID       string             `bson:"wallet_id"`
+	NationalID     string			  `bson:"national_id"`
 	FailedReason   string             `bson:"failed_reason,omitempty"`
 	CreatedAt      time.Time          `bson:"created_at"`
 	UpdatedAt      time.Time          `bson:"updated_at,omitempty"`
@@ -34,11 +37,13 @@ type SMSNotification struct {
 	ID             primitive.ObjectID `bson:"_id,omitempty"`
 	PhoneNumber    string             `bson:"phone_number"`
 	MessageContent string             `bson:"message_content"`
+	EventType	   string			  `bson:"event_type"`
 	Status         NotificationStatus `bson:"status"`
 	Amount         int64              `bson:"amount"`
 	NewBalance     int64              `bson:"balance"`
 	TransactionID  string             `bson:"transaction_id"`
 	WalletID       string             `bson:"wallet_id"`
+	NationalID     string			  `bson:"national_id"`
 	FailedReason   string             `bson:"failed_reason,omitempty"`
 	CreatedAt      time.Time          `bson:"created_at"`
 	UpdatedAt      time.Time          `bson:"updated_at,omitempty"`
@@ -47,6 +52,5 @@ type SMSNotification struct {
 // --- Domain Errors ---
 // The service layer will check for these exact errors without knowing about
 // MongoDB to completely separate service from db
-//var (
-
-//)
+// internal/notifications — new domain error next to your others
+var ErrNotificationExists = errors.New("notification already exists for transaction")

@@ -7,6 +7,7 @@ import (
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
+	"go.mongodb.org/mongo-driver/mongo/options"
 
 	//project imports
 	"svc-notifications/internal/notifications"
@@ -22,8 +23,28 @@ type mongoRepository struct {
 //
 //	returns a repository interface (to make the service layer interact only with the interface functions)
 func NewNotificationRepository(ctx context.Context, db *mongo.Database) (notifications.Repository, error) {
+	log := logger.Ctx(ctx)
 	pushColl := db.Collection("push_notifications") // this is the collection in the mongo database where the push notifications are stored
 	smsColl := db.Collection("sms_notifications")   // this is the collection in the mongo database where the sms notifications are stored
+	
+	_, err := smsColl.Indexes().CreateOne(ctx, mongo.IndexModel{ 
+		Keys:    bson.M{"transaction_id": 1},                                   
+		Options: options.Index().SetUnique(true).SetName("unique_transaction"), 
+	})
+	if err != nil {
+		log.Error().Err(err).Msg("Failed to create the unique transaction index (from repo layer)")
+		return nil, err
+	}
+
+
+	_, err = pushColl.Indexes().CreateOne(ctx, mongo.IndexModel{
+		Keys:    bson.M{"transaction_id": 1},                                   
+		Options: options.Index().SetUnique(true).SetName("unique_transaction"), 
+	})
+	if err != nil {
+		log.Error().Err(err).Msg("Failed to create the unique transaction index (from repo layer)")
+		return nil, err
+	}
 
 	return &mongoRepository{pushCollection: pushColl, smsCollection: smsColl}, nil // return the mongoRepository struct with the collections (this is a repository)
 
@@ -38,6 +59,9 @@ func (r *mongoRepository) SavePushNotification(ctx context.Context, pn *notifica
 	//the time out of the request is embedded in the ctx
 	// beside ctx contains meta data
 	if err != nil {
+		if mongo.IsDuplicateKeyError(err) {
+			return notifications.ErrNotificationExists // return the domain error to indicate that the notification has already been processed
+		}
 		log.Error().Err(err).Msg("Failed to insert push notification (from repo layer)")
 		return err // return any other error
 	}
@@ -78,6 +102,9 @@ func (r *mongoRepository) SaveSMSNotification(ctx context.Context, sn *notificat
 	//the time out of the request is embedded in the ctx
 	// beside ctx contains meta data
 	if err != nil {
+		if mongo.IsDuplicateKeyError(err) {
+			return notifications.ErrNotificationExists // return the domain error to indicate that the notification has already been processed
+		}
 		log.Error().Err(err).Msg("Failed to insert sms notification (from repo layer)")
 		return err // return any other error
 	}
