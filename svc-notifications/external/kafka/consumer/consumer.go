@@ -1,30 +1,36 @@
 package consumer
 
 import (
-    "context"
-    "encoding/json"
-    "time"
+	"context"
+	"encoding/json"
 	"errors"
+	"time"
 
-    "github.com/IBM/sarama"
+	"github.com/IBM/sarama"
 
-    "svc-notifications/internal/notifications"
-    "svc-notifications/util/logger"
+	"svc-notifications/internal/notifications"
+	"svc-notifications/util/logger"
 )
 
 const (
-    maxRetries   = 10               // bounded-retry 
-    retryBackoff = 500 * time.Millisecond // backoff between retries
+	maxRetries   = 10                     // bounded-retry
+	retryBackoff = 500 * time.Millisecond // backoff between retries
 )
 
+// the consumer's ONLY view of the service
+// this is the contrsct between the service and the consumer
+type TransactionEventProcessor interface {
+	ProcessTransactionEvent(ctx context.Context, evt notifications.TransactionEvent) error
+}
+
 type Consumer struct {
-    group     sarama.ConsumerGroup
-    topic     string
-    processor notifications.TransactionEventProcessor
+	group     sarama.ConsumerGroup
+	topic     string
+	processor TransactionEventProcessor
 }
 
 func NewConsumer(ctx context.Context, brokers []string, groupID, topic string,
-	p notifications.TransactionEventProcessor) (*Consumer, error) {
+	p TransactionEventProcessor) (*Consumer, error) {
 	log := logger.Ctx(ctx)
 	cfg := sarama.NewConfig()
 	cfg.Version = sarama.V3_5_0_0
@@ -35,31 +41,31 @@ func NewConsumer(ctx context.Context, brokers []string, groupID, topic string,
 		return nil, err
 	}
 	return &Consumer{
-		group: group,
-		topic: topic,
+		group:     group,
+		topic:     topic,
 		processor: p,
 	}, nil
 }
 
 func (c *Consumer) Run(ctx context.Context) {
-    log := logger.Ctx(ctx)
-    for {
-        err := c.group.Consume(ctx, []string{c.topic}, &handler{processor: c.processor})
-        if err != nil {
-            if errors.Is(err, sarama.ErrClosedConsumerGroup) || ctx.Err() != nil {
-                return    // return when the group is closed or the context is canceled
-            }
-            log.Error().Err(err).Msg("consume cycle failed, retrying")
-            time.Sleep(time.Second)         // broker blips, rebalance hiccups
-        }
-        if ctx.Err() != nil {
-            return
-        }
-    }
+	log := logger.Ctx(ctx)
+	for {
+		err := c.group.Consume(ctx, []string{c.topic}, &handler{processor: c.processor})
+		if err != nil {
+			if errors.Is(err, sarama.ErrClosedConsumerGroup) || ctx.Err() != nil {
+				return // return when the group is closed or the context is canceled
+			}
+			log.Error().Err(err).Msg("consume cycle failed, retrying")
+			time.Sleep(time.Second) // broker blips, rebalance hiccups
+		}
+		if ctx.Err() != nil {
+			return
+		}
+	}
 }
 func (c *Consumer) Close() error { return c.group.Close() }
 
-type handler struct{ processor notifications.TransactionEventProcessor }
+type handler struct{ processor TransactionEventProcessor }
 
 var _ sarama.ConsumerGroupHandler = (*handler)(nil)
 
@@ -72,7 +78,7 @@ func (h *handler) ConsumeClaim(s sarama.ConsumerGroupSession, claim sarama.Consu
 		var evt notifications.TransactionEvent
 		if err := json.Unmarshal(msg.Value, &evt); err != nil {
 			log.Error().Err(err).Msgf("Failed to unmarshal transaction event: topic=%s partition=%d offset=%d", msg.Topic, msg.Partition, msg.Offset)
-			s.MarkMessage(msg,"") // mark the message as processed to avoid reprocessing
+			s.MarkMessage(msg, "") // mark the message as processed to avoid reprocessing
 			continue
 		}
 
@@ -95,7 +101,7 @@ func (h *handler) ConsumeClaim(s sarama.ConsumerGroupSession, claim sarama.Consu
 		var err error
 		for i := 0; i < maxRetries; i++ {
 			err = h.processor.ProcessTransactionEvent(s.Context(), evt) // the process is idempotent, so we can retry safely
-			if err == nil { // the process done
+			if err == nil {                                             // the process done
 				break
 			}
 			time.Sleep(retryBackoff)
@@ -104,7 +110,7 @@ func (h *handler) ConsumeClaim(s sarama.ConsumerGroupSession, claim sarama.Consu
 		if err != nil {
 			log.Error().Err(err).Msgf("Failed to process transaction event after %d retries: topic=%s partition=%d offset=%d payload=%s", maxRetries, msg.Topic, msg.Partition, msg.Offset, string(msg.Value))
 		}
-		s.MarkMessage(msg,"") // commits after process (at least once delivery)
+		s.MarkMessage(msg, "") // commits after process (at least once delivery)
 	}
 	return nil
 }

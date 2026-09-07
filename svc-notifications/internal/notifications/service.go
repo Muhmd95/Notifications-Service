@@ -9,12 +9,6 @@ import (
 	"time"
 )
 
-// the consumer's ONLY view of the service
-// this is the contrsct between the service and the consumer
-type TransactionEventProcessor interface {
-	ProcessTransactionEvent(ctx context.Context, evt TransactionEvent) error
-}
-
 type Service struct {
 	repo Repository // this is the repository interface that will be used to interact with the database
 }
@@ -130,6 +124,7 @@ func (s *Service) SendSMSNotification(ctx context.Context, pn *CreateSMSNotifica
 	}
 }
 
+// implementation for the consumer
 func (s *Service) ProcessTransactionEvent(ctx context.Context, evt TransactionEvent) error {
 
 	message, err := renderNotificationText(evt)
@@ -141,10 +136,6 @@ func (s *Service) ProcessTransactionEvent(ctx context.Context, evt TransactionEv
 	return errors.Join(pushErr, smsErr)
 
 }
-
-
-
-
 
 // helper functions for service layer to build the notification requests from the transaction event
 func buildPush(evt TransactionEvent, message string) *CreatePushNotificationRequest {
@@ -176,14 +167,13 @@ func buildSMS(evt TransactionEvent, message string) *CreateSMSNotificationReques
 	}
 }
 
-
 func renderNotificationText(evt TransactionEvent) (string, error) {
 	var transactionType string
 	if evt.EventType == "WITHDRAWAL" {
 		transactionType = "WITHDRAWAL"
 	} else if evt.EventType == "DEPOSIT" {
 		transactionType = "DEPOSIT"
-	} else {	
+	} else {
 		if evt.PhoneNumber == evt.SenderPhoneNumber {
 			transactionType = "TRANSFER_SENDER"
 		} else {
